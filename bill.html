@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Restaurant Bill</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- QR Code Generator -->
+    <script src="https://cdn.rawgit.com/davidshimjs/qrcodejs/gh-pages/qrcode.min.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f8f9fa;
+            padding-top: 40px;
+        }
+        .bill-print {
+            background-color: white;
+            padding: 30px;
+            max-width: 800px;
+            margin: 0 auto;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        @media print {
+            body * {
+                visibility: hidden;
+            }
+            .bill-print, .bill-print * {
+                visibility: visible;
+            }
+            .bill-print {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+                box-shadow: none;
+            }
+            .no-print {
+                display: none !important;
+            }
+        }
+        .qr-code-container {
+            text-align: center;
+            margin: 20px 0;
+        }
+        .qr-code {
+            width: 150px;
+            height: 150px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 10px;
+            border: 1px solid #ddd;
+        }
+        .loading-spinner {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+    </style>
+</head>
+<body>
+    <!-- Loading Spinner -->
+    <div id="loading" class="loading-spinner">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+    </div>
+
+    <!-- Bill Container -->
+    <div id="bill-container" class="container" style="display: none;">
+        <div id="bill-content" class="bill-print">
+            <!-- Bill content will be loaded here -->
+        </div>
+        <div class="text-center mt-3 no-print">
+            <button class="btn btn-primary" onclick="window.print()">
+                <i class="fas fa-print me-2"></i>Print Bill
+            </button>
+            <button class="btn btn-secondary ms-2" onclick="window.close()">
+                <i class="fas fa-times me-2"></i>Close
+            </button>
+        </div>
+    </div>
+
+    <!-- Error Message -->
+    <div id="error-message" class="alert alert-danger text-center mt-5" style="display: none;"></div>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-firestore-compat.js"></script>
+    
+    <script>
+        // Your Firebase configuration
+        const firebaseConfig = {
+            apiKey: "YOUR_API_KEY",
+            authDomain: "YOUR_AUTH_DOMAIN",
+            projectId: "YOUR_PROJECT_ID",
+            storageBucket: "YOUR_STORAGE_BUCKET",
+            messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+            appId: "YOUR_APP_ID"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        // Function to generate bill content
+        function generateBillContent(order, settings) {
+            const orderTotal = calculateOrderTotal(order);
+            const taxRate = settings.taxRate || 5;
+            const cgstRate = settings.cgstRate || 2.5;
+            const sgstRate = settings.sgstRate || 2.5;
+            const serviceChargeRate = settings.serviceCharge || 10;
+            
+            const taxAmount = orderTotal * (taxRate / 100);
+            const cgstAmount = orderTotal * (cgstRate / 100);
+            const sgstAmount = orderTotal * (sgstRate / 100);
+            const serviceCharge = orderTotal * (serviceChargeRate / 100);
+            const grandTotal = orderTotal + taxAmount + serviceCharge;
+            
+            let content = `
+                <div class="text-center mb-3">
+                    ${settings.logo ? `<img src="${settings.logo}" alt="Restaurant Logo" style="max-height: 80px; margin-bottom: 10px;">` : ''}
+                    <h3>${settings.restaurantName}</h3>
+                    <p class="mb-1">${settings.address}</p>
+                    <p class="mb-1">Phone: ${settings.phone}</p>
+                    ${settings.email ? `<p class="mb-1">Email: ${settings.email}</p>` : ''}
+                    ${settings.gst ? `<p class="mb-1">GST: ${settings.gst}</p>` : ''}
+                    <hr>
+                    <h4>CUSTOMER COPY</h4>
+                    <hr>
+                </div>
+                
+                <div class="row mb-3">
+                    <div class="col-6">
+                        <p><strong>Order #:</strong> ${order.id}</p>
+                        <p><strong>Date:</strong> ${new Date(order.date).toLocaleString()}</p>
+                    </div>
+                    <div class="col-6 text-end">
+                        <p><strong>Table #:</strong> ${order.tableNumber}</p>
+                        <p><strong>Customer:</strong> ${order.customerName}</p>
+                        ${order.customerPhone ? `<p><strong>Phone:</strong> ${order.customerPhone}</p>` : ''}
+                    </div>
+                </div>
+                
+                <table class="table table-sm">
+                    <thead>
+                        <tr>
+                            <th>Item</th>
+                            <th class="text-end">Qty</th>
+                            <th class="text-end">Price</th>
+                            <th class="text-end">Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+            
+            order.items.forEach(item => {
+                content += `
+                    <tr>
+                        <td>${item.name}</td>
+                        <td class="text-end">${item.quantity}</td>
+                        <td class="text-end">₹${item.price.toFixed(2)}</td>
+                        <td class="text-end">₹${(item.price * item.quantity).toFixed(2)}</td>
+                    </tr>
+                `;
+            });
+            
+            content += `</tbody></table>`;
+            
+            content += `
+                <div class="text-end">
+                    <p><strong>Subtotal:</strong> ₹${orderTotal.toFixed(2)}</p>
+                    ${taxRate > 0 ? `<p><strong>Tax (${taxRate}%):</strong> ₹${taxAmount.toFixed(2)}</p>` : ''}
+                    ${cgstRate > 0 ? `<p><strong>CGST (${cgstRate}%):</strong> ₹${cgstAmount.toFixed(2)}</p>` : ''}
+                    ${sgstRate > 0 ? `<p><strong>SGST (${sgstRate}%):</strong> ₹${sgstAmount.toFixed(2)}</p>` : ''}
+                    ${serviceChargeRate > 0 ? `<p><strong>Service Charge (${serviceChargeRate}%):</strong> ₹${serviceCharge.toFixed(2)}</p>` : ''}
+                    <h5><strong>Grand Total:</strong> ₹${grandTotal.toFixed(2)}</h5>
+                </div>
+                
+                <hr>
+                <div class="qr-code-container">
+                    <p class="mb-2"><strong>Scan for payment or bill details</strong></p>
+                    <div id="qr-code" class="qr-code"></div>
+                    <p class="mt-2 small text-muted">Reference: ${order.id}</p>
+                </div>
+                
+                <div class="text-center mt-3">
+                    <p>Thank you for dining with us!</p>
+                    <p>Please visit again</p>
+                </div>
+            `;
+            
+            return content;
+        }
+
+        function calculateOrderTotal(order) {
+            return order.items.reduce((total, item) => total + (item.price * item.quantity), 0);
+        }
+
+        // Function to load and display the bill
+        async function loadBill() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const orderId = urlParams.get('order');
+            
+            if (!orderId) {
+                showError('No order ID provided in URL');
+                return;
+            }
+            
+            try {
+                // Find the restaurant that contains this order
+                const restaurantsSnapshot = await db.collection('restaurants').get();
+                let orderData = null;
+                let restaurantId = null;
+                let settings = null;
+                
+                // Search all restaurants for this order
+                for (const restaurantDoc of restaurantsSnapshot.docs) {
+                    const orderDoc = await db.collection('restaurants').doc(restaurantDoc.id)
+                        .collection('orders').doc(orderId).get();
+                    
+                    if (orderDoc.exists) {
+                        orderData = orderDoc.data();
+                        restaurantId = restaurantDoc.id;
+                        
+                        // Get restaurant settings
+                        const settingsDoc = await db.collection('restaurants').doc(restaurantId).get();
+                        settings = settingsDoc.data().settings;
+                        break;
+                    }
+                }
+                
+                if (!orderData) {
+                    showError('Bill not found');
+                    return;
+                }
+                
+                // Convert Firestore timestamp to Date if needed
+                if (orderData.date && orderData.date.toDate) {
+                    orderData.date = orderData.date.toDate().toISOString();
+                }
+                
+                // Generate and display bill content
+                document.getElementById('bill-content').innerHTML = generateBillContent(orderData, settings);
+                
+                // Generate QR code
+                new QRCode(document.getElementById("qr-code"), {
+                    text: window.location.href,
+                    width: 150,
+                    height: 150,
+                    colorDark: "#000000",
+                    colorLight: "#ffffff",
+                    correctLevel: QRCode.CorrectLevel.H
+                });
+                
+                // Hide loading spinner and show bill
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('bill-container').style.display = 'block';
+                
+            } catch (error) {
+                console.error("Error loading bill:", error);
+                showError('Error loading bill. Please try again.');
+            }
+        }
+        
+        function showError(message) {
+            document.getElementById('loading').style.display = 'none';
+            const errorElement = document.getElementById('error-message');
+            errorElement.textContent = message;
+            errorElement.style.display = 'block';
+        }
+        
+        // Load the bill when page loads
+        document.addEventListener('DOMContentLoaded', loadBill);
+    </script>
+</body>
+</html>
