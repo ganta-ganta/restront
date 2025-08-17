@@ -1,81 +1,152 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>View Your Bill</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
-        .bill-container { max-width: 800px; margin: 2rem auto; padding: 2rem; border: 1px solid #ddd; }
-        .loading { display: flex; justify-content: center; padding: 5rem; }
-        .error { color: #dc3545; text-align: center; padding: 2rem; }
+        .bill-container { 
+            max-width: 800px; 
+            margin: 2rem auto; 
+            padding: 2rem; 
+            border: 1px solid #ddd; 
+            background: white;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        .loading { 
+            display: flex; 
+            justify-content: center; 
+            padding: 5rem; 
+        }
+        .error { 
+            color: #dc3545; 
+            text-align: center; 
+            padding: 2rem; 
+        }
+        body {
+            background-color: #f8f9fa;
+            font-family: Arial, sans-serif;
+            padding-top: 2rem;
+        }
+        .print-btn {
+            display: none;
+        }
+        @media print {
+            .no-print {
+                display: none !important;
+            }
+            body {
+                background-color: white;
+                padding: 0;
+            }
+            .bill-container {
+                box-shadow: none;
+                border: none;
+                padding: 0;
+                margin: 0;
+                max-width: 100%;
+            }
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <div id="loading" class="loading">
             <div class="spinner-border text-primary"></div>
+            <span class="visually-hidden">Loading...</span>
         </div>
         
         <div id="bill-display" class="bill-container" style="display:none;">
-            <!-- Bill content loads here -->
+            <!-- Bill content will appear here -->
         </div>
         
         <div id="error-display" class="error" style="display:none;"></div>
+        
+        <div class="text-center mt-3 no-print">
+            <button id="print-btn" class="btn btn-primary print-btn" onclick="window.print()">
+                <i class="fas fa-print me-2"></i>Print Bill
+            </button>
+        </div>
     </div>
 
     <!-- Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-firestore-compat.js"></script>
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <script>
-        // Your Firebase configuration (REPLACE WITH YOUR ACTUAL CONFIG)
+        // Your Firebase configuration
         const firebaseConfig = {
-    apiKey: "AIzaSyAhpW9iqp4O18sIysTyYE1Qk90pCizIysU",
-    authDomain: "estront-d6831.firebaseapp.com",
-    projectId: "estront-d6831",
-    storageBucket: "estront-d6831.firebasestorage.app",
-    messagingSenderId: "678690095471",
-    appId: "1:678690095471:web:c62279b2c62a6f68ade89a",
-    measurementId: "G-1SFVMT2W2E"
-  };
+            apiKey: "AIzaSyAhpW9iqp4O18sIysTyYE1Qk90pCizIysU",
+            authDomain: "estront-d6831.firebaseapp.com",
+            projectId: "estront-d6831",
+            storageBucket: "estront-d6831.firebasestorage.app",
+            messagingSenderId: "678690095471",
+            appId: "1:678690095471:web:c62279b2c62a6f68ade89a",
+            measurementId: "G-1SFVMT2W2E"
+        };
+
         // Initialize Firebase
-        const app = firebase.initializeApp(firebaseConfig);
-        const db = firebase.firestore();
-        
-        // Now it's safe to use Firebase services
+        let db;
+        try {
+            const app = firebase.initializeApp(firebaseConfig);
+            db = firebase.firestore();
+            console.log("Firebase initialized successfully");
+        } catch (error) {
+            console.error("Firebase initialization error:", error);
+            showError("Failed to initialize the billing system. Please try again later.");
+        }
+
         async function loadBill() {
-            const urlParams = new URLSearchParams(window.location.search);
-            const orderId = urlParams.get('order');
-            
-            if (!orderId) {
-                showError("No order ID provided in URL");
-                return;
-            }
-            
             try {
-                // Search all restaurants for the order
-                const restaurants = await db.collection('restaurants').get();
-                let orderData = null;
-                let restaurantData = null;
+                const urlParams = new URLSearchParams(window.location.search);
+                const orderId = urlParams.get('order');
                 
-                for (const restaurant of restaurants.docs) {
-                    const orderDoc = await restaurant.ref.collection('orders').doc(orderId).get();
-                    if (orderDoc.exists) {
-                        orderData = orderDoc.data();
-                        restaurantData = restaurant.data();
-                        break;
-                    }
+                if (!orderId) {
+                    showError("No order ID provided in URL");
+                    return;
                 }
+                
+                console.log("Loading order:", orderId);
+                const orderData = await fetchOrder(orderId);
                 
                 if (!orderData) {
                     showError("Bill not found. Please check the order number.");
                     return;
                 }
                 
-                renderBill(orderData, restaurantData.settings);
+                renderBill(orderData.order, orderData.settings);
+                document.getElementById('print-btn').style.display = 'inline-block';
                 
             } catch (error) {
                 console.error("Error loading bill:", error);
                 showError("Error loading bill. Please try again later.");
+            }
+        }
+
+        async function fetchOrder(orderId) {
+            try {
+                const restaurants = await db.collection('restaurants').get();
+                
+                for (const restaurant of restaurants.docs) {
+                    const orderDoc = await restaurant.ref.collection('orders').doc(orderId).get();
+                    if (orderDoc.exists) {
+                        const settings = restaurant.data().settings || {};
+                        return {
+                            order: {
+                                ...orderDoc.data(),
+                                id: orderDoc.id
+                            },
+                            settings
+                        };
+                    }
+                }
+                return null;
+            } catch (error) {
+                console.error("Error fetching order:", error);
+                throw error;
             }
         }
         
@@ -83,30 +154,46 @@
             const billDisplay = document.getElementById('bill-display');
             
             // Format date
-            const orderDate = order.date.toDate ? order.date.toDate() : new Date(order.date);
+            const orderDate = order.date?.toDate ? order.date.toDate() : new Date(order.date || Date.now());
             
             // Calculate totals
-            const subtotal = order.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-            const tax = subtotal * (settings.taxRate / 100 || 0);
-            const total = subtotal + tax;
+            const subtotal = order.items?.reduce((sum, item) => sum + (item.price * item.quantity), 0) || 0;
+            const taxRate = settings.taxRate || 0;
+            const cgstRate = settings.cgstRate || 0;
+            const sgstRate = settings.sgstRate || 0;
+            const serviceChargeRate = settings.serviceCharge || 0;
+            
+            const tax = subtotal * (taxRate / 100);
+            const cgst = subtotal * (cgstRate / 100);
+            const sgst = subtotal * (sgstRate / 100);
+            const serviceCharge = subtotal * (serviceChargeRate / 100);
+            const total = subtotal + tax + serviceCharge;
             
             // Generate HTML
             billDisplay.innerHTML = `
-                <h2 class="text-center">${settings.restaurantName || 'Restaurant'}</h2>
-                <hr>
-                <div class="row">
+                <div class="text-center mb-4">
+                    ${settings.logo ? `<img src="${settings.logo}" alt="Restaurant Logo" style="max-height: 80px; margin-bottom: 1rem;">` : ''}
+                    <h2 class="mb-1">${settings.restaurantName || 'Restaurant Bill'}</h2>
+                    ${settings.address ? `<p class="text-muted mb-1">${settings.address}</p>` : ''}
+                    ${settings.phone ? `<p class="text-muted mb-1">Phone: ${settings.phone}</p>` : ''}
+                    ${settings.gst ? `<p class="text-muted">GST: ${settings.gst}</p>` : ''}
+                    <hr>
+                </div>
+                
+                <div class="row mb-3">
                     <div class="col-md-6">
-                        <p><strong>Order #:</strong> ${order.id}</p>
+                        <p><strong>Order #:</strong> ${order.id || 'N/A'}</p>
                         <p><strong>Date:</strong> ${orderDate.toLocaleString()}</p>
                     </div>
                     <div class="col-md-6 text-end">
                         <p><strong>Table #:</strong> ${order.tableNumber || 'N/A'}</p>
                         <p><strong>Customer:</strong> ${order.customerName || 'Walk-in'}</p>
+                        ${order.customerPhone ? `<p><strong>Phone:</strong> ${order.customerPhone}</p>` : ''}
                     </div>
                 </div>
                 
-                <table class="table mt-4">
-                    <thead>
+                <table class="table table-bordered mt-4">
+                    <thead class="table-light">
                         <tr>
                             <th>Item</th>
                             <th class="text-end">Price</th>
@@ -115,26 +202,30 @@
                         </tr>
                     </thead>
                     <tbody>
-                        ${order.items.map(item => `
+                        ${order.items?.map(item => `
                             <tr>
-                                <td>${item.name}</td>
-                                <td class="text-end">₹${item.price.toFixed(2)}</td>
-                                <td class="text-end">${item.quantity}</td>
-                                <td class="text-end">₹${(item.price * item.quantity).toFixed(2)}</td>
+                                <td>${item.name || 'Item'}</td>
+                                <td class="text-end">₹${(item.price || 0).toFixed(2)}</td>
+                                <td class="text-end">${item.quantity || 1}</td>
+                                <td class="text-end">₹${((item.price || 0) * (item.quantity || 1)).toFixed(2)}</td>
                             </tr>
-                        `).join('')}
+                        `).join('') || '<tr><td colspan="4" class="text-center">No items found</td></tr>'}
                     </tbody>
                 </table>
                 
                 <div class="text-end mt-4">
                     <p><strong>Subtotal:</strong> ₹${subtotal.toFixed(2)}</p>
-                    <p><strong>Tax (${settings.taxRate || 0}%):</strong> ₹${tax.toFixed(2)}</p>
+                    ${taxRate > 0 ? `<p><strong>Tax (${taxRate}%):</strong> ₹${tax.toFixed(2)}</p>` : ''}
+                    ${cgstRate > 0 ? `<p><strong>CGST (${cgstRate}%):</strong> ₹${cgst.toFixed(2)}</p>` : ''}
+                    ${sgstRate > 0 ? `<p><strong>SGST (${sgstRate}%):</strong> ₹${sgst.toFixed(2)}</p>` : ''}
+                    ${serviceChargeRate > 0 ? `<p><strong>Service Charge (${serviceChargeRate}%):</strong> ₹${serviceCharge.toFixed(2)}</p>` : ''}
                     <hr>
-                    <h4><strong>Total:</strong> ₹${total.toFixed(2)}</h4>
+                    <h4><strong>Grand Total:</strong> ₹${total.toFixed(2)}</h4>
                 </div>
                 
-                <div class="text-center mt-4">
+                <div class="text-center mt-4 pt-3 border-top">
                     <p>Thank you for dining with us!</p>
+                    <p class="text-muted small">For any queries, please contact restaurant staff</p>
                 </div>
             `;
             
@@ -145,7 +236,22 @@
         function showError(message) {
             document.getElementById('loading').style.display = 'none';
             const errorDiv = document.getElementById('error-display');
-            errorDiv.textContent = message;
+            errorDiv.innerHTML = `
+                <div class="alert alert-danger">
+                    <h4>Error Loading Bill</h4>
+                    <p>${message}</p>
+                    <p class="small mt-2">Please ensure:
+                        <ul class="small">
+                            <li>You have a stable internet connection</li>
+                            <li>The order number is correct</li>
+                            <li>You're using a supported browser</li>
+                        </ul>
+                    </p>
+                    <button class="btn btn-sm btn-outline-secondary" onclick="window.location.reload()">
+                        <i class="fas fa-sync-alt me-1"></i> Try Again
+                    </button>
+                </div>
+            `;
             errorDiv.style.display = 'block';
         }
         
