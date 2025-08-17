@@ -22,12 +22,13 @@
         <div id="error-display" class="error" style="display:none;"></div>
     </div>
 
+    <!-- Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-firestore-compat.js"></script>
     
     <script>
-        // Initialize Firebase
-         const firebaseConfig = {
+        // Your Firebase configuration (REPLACE WITH YOUR ACTUAL CONFIG)
+        const firebaseConfig = {
     apiKey: "AIzaSyAhpW9iqp4O18sIysTyYE1Qk90pCizIysU",
     authDomain: "estront-d6831.firebaseapp.com",
     projectId: "estront-d6831",
@@ -36,9 +37,11 @@
     appId: "1:678690095471:web:c62279b2c62a6f68ade89a",
     measurementId: "G-1SFVMT2W2E"
   };
-        
+        // Initialize Firebase
+        const app = firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
         
+        // Now it's safe to use Firebase services
         async function loadBill() {
             const urlParams = new URLSearchParams(window.location.search);
             const orderId = urlParams.get('order');
@@ -147,7 +150,7 @@
         }
         
         // Start loading when page loads
-        window.addEventListener('DOMContentLoaded', loadBill);
+        document.addEventListener('DOMContentLoaded', loadBill);
     </script>
 </body>
 </html>
