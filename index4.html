@@ -1,0 +1,2186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Restaurant Billing System</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            background-color: #f8f9fa;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .sidebar {
+            background-color: #343a40;
+            color: white;
+            min-height: 100vh;
+            height: 100%;
+            position: fixed;
+            z-index: 100;
+            overflow-y: auto;
+        }
+        .sidebar .nav-link {
+            color: rgba(255, 255, 255, 0.8);
+            padding: 0.75rem 1rem;
+            border-radius: 0.25rem;
+            margin-bottom: 0.25rem;
+        }
+        .sidebar .nav-link:hover, .sidebar .nav-link.active {
+            color: white;
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+        .main-content {
+            margin-left: 16.66666667%;
+            width: 83.33333333%;
+        }
+        .content-section {
+            display: none;
+        }
+        .content-section.active {
+            display: block;
+        }
+        .order-item {
+            padding: 0.5rem 0;
+            border-bottom: 1px solid #eee;
+        }
+        
+        /* Tablet view styles */
+        .tablet-view {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+        .tablet-menu-item {
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-bottom: 10px;
+        }
+        .tablet-menu-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .tablet-category-btn {
+            margin: 3px;
+            white-space: nowrap;
+            font-size: 0.9rem;
+        }
+        .network-status {
+            position: fixed;
+            bottom: 10px;
+            right: 10px;
+            z-index: 1000;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+        }
+        .network-online {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .network-offline {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        .menu-item-img {
+            height: 120px;
+            object-fit: cover;
+        }
+        .toast-container {
+            z-index: 9999;
+        }
+        .table-status-available {
+            background-color: #d4edda !important;
+        }
+        .table-status-occupied {
+            background-color: #f8d7da !important;
+        }
+        .kitchen-order {
+            border-left: 5px solid #0d6efd;
+            margin-bottom: 15px;
+        }
+        .kitchen-order.urgent {
+            border-left-color: #dc3545;
+        }
+        .kitchen-order.ready {
+            border-left-color: #198754;
+        }
+        .order-status-badge {
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar Navigation -->
+            <div class="col-md-2 sidebar p-3">
+                <h4 class="text-center mb-4 text-white">Restaurant POS</h4>
+                <ul class="nav flex-column">
+                    <li class="nav-item">
+                        <a class="nav-link active" href="#" data-section="dashboard">
+                            <i class="fas fa-tachometer-alt me-2"></i>Dashboard
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" data-section="tables">
+                            <i class="fas fa-table me-2"></i>Table Management
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" data-section="orders">
+                            <i class="fas fa-utensils me-2"></i>New Order
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" data-section="kitchen">
+                            <i class="fas fa-utensils me-2"></i>Kitchen View
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" data-section="menu">
+                            <i class="fas fa-list me-2"></i>Menu Management
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" data-section="reports">
+                            <i class="fas fa-chart-bar me-2"></i>Reports
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" data-section="settings">
+                            <i class="fas fa-cog me-2"></i>Settings
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" data-section="tablet">
+                            <i class="fas fa-tablet-alt me-2"></i>Tablet View
+                        </a>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- Main Content Area -->
+            <div class="col-md-10 p-4 main-content">
+                <!-- Dashboard Section -->
+                <div id="dashboard" class="content-section active">
+                    <h3><i class="fas fa-tachometer-alt me-2"></i>Dashboard</h3>
+                    <hr>
+                    <div class="row">
+                        <div class="col-md-3">
+                            <div class="card bg-primary text-white mb-4">
+                                <div class="card-body">
+                                    <h5 class="card-title">Today's Orders</h5>
+                                    <h2 class="card-text" id="today-orders">0</h2>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card bg-success text-white mb-4">
+                                <div class="card-body">
+                                    <h5 class="card-title">Today's Revenue</h5>
+                                    <h2 class="card-text" id="today-revenue">₹0.00</h2>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card bg-info text-white mb-4">
+                                <div class="card-body">
+                                    <h5 class="card-title">Active Tables</h5>
+                                    <h2 class="card-text" id="active-tables">0/0</h2>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card bg-warning text-white mb-4">
+                                <div class="card-body">
+                                    <h5 class="card-title">Pending Orders</h5>
+                                    <h2 class="card-text" id="pending-orders">0</h2>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">Recent Orders</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>Order ID</th>
+                                            <th>Table</th>
+                                            <th>Customer</th>
+                                            <th>Amount</th>
+                                            <th>Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="recent-orders">
+                                        <tr>
+                                            <td colspan="5" class="text-center">No recent orders</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Table Management Section -->
+                <div id="tables" class="content-section">
+                    <h3><i class="fas fa-table me-2"></i>Table Management</h3>
+                    <hr>
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5 class="mb-0">Add New Table</h5>
+                                </div>
+                                <div class="card-body">
+                                    <form id="add-table-form">
+                                        <div class="mb-3">
+                                            <label for="table-number" class="form-label">Table Number</label>
+                                            <input type="number" class="form-control" id="table-number" required min="1">
+                                        </div>
+                                        <div class="mb-3">
+                                            <label for="table-capacity" class="form-label">Capacity</label>
+                                            <input type="number" class="form-control" id="table-capacity" required min="1">
+                                        </div>
+                                        <button type="submit" class="btn btn-primary">Add Table</button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5 class="mb-0">Table Status Legend</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="d-flex align-items-center mb-2">
+                                        <div class="table-status-available me-2" style="width: 20px; height: 20px; border-radius: 4px;"></div>
+                                        <span>Available</span>
+                                    </div>
+                                    <div class="d-flex align-items-center">
+                                        <div class="table-status-occupied me-2" style="width: 20px; height: 20px; border-radius: 4px;"></div>
+                                        <span>Occupied</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <h4>All Tables</h4>
+                    <div class="row" id="tables-container">
+                        <!-- Tables will be loaded here -->
+                    </div>
+                </div>
+                
+                <!-- New Order Section -->
+                <div id="orders" class="content-section">
+                    <h3><i class="fas fa-utensils me-2"></i>New Order</h3>
+                    <hr>
+                    <div class="row">
+                        <div class="col-md-8">
+                            <div class="card mb-4">
+                                <div class="card-header">
+                                    <h5 class="mb-0">Order Details</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row mb-3">
+                                        <div class="col-md-6">
+                                            <label for="order-customer-name" class="form-label">Customer Name</label>
+                                            <input type="text" class="form-control" id="order-customer-name" placeholder="Enter customer name">
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label for="order-customer-phone" class="form-label">Customer Phone</label>
+                                            <input type="tel" class="form-control" id="order-customer-phone" placeholder="Enter phone number">
+                                        </div>
+                                    </div>
+                                    <div class="row mb-3">
+                                        <div class="col-md-6">
+                                            <label for="order-type" class="form-label">Order Type</label>
+                                            <select class="form-select" id="order-type">
+                                                <option value="dine-in">Dine-In</option>
+                                                <option value="takeaway">Takeaway</option>
+                                                <option value="delivery">Delivery</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-6" id="order-table-section">
+                                            <label for="order-table-number" class="form-label">Table Number</label>
+                                            <select class="form-select" id="order-table-number">
+                                                <!-- Tables will be loaded here -->
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="card">
+                                <div class="card-header d-flex justify-content-between align-items-center">
+                                    <h5 class="mb-0">Menu Items</h5>
+                                    <div>
+                                        <select class="form-select form-select-sm" id="menu-category-filter">
+                                            <option value="all">All Categories</option>
+                                            <!-- Categories will be loaded here -->
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row" id="menu-items-container">
+                                        <!-- Menu items will be loaded here -->
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-4">
+                            <div class="card sticky-top" style="top: 20px; z-index: 1;">
+                                <div class="card-header">
+                                    <h5 class="mb-0">Current Order</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div id="order-items" style="max-height: 300px; overflow-y: auto;">
+                                        <p class="text-muted text-center">No items added yet</p>
+                                    </div>
+                                    
+                                    <hr>
+                                    <div class="d-flex justify-content-between mb-2">
+                                        <span>Subtotal:</span>
+                                        <span id="order-subtotal">₹0.00</span>
+                                    </div>
+                                    <div class="d-flex justify-content-between mb-2">
+                                        <span>Tax (<span id="order-tax-rate">5</span>%):</span>
+                                        <span id="order-tax">₹0.00</span>
+                                    </div>
+                                    <div class="d-flex justify-content-between mb-3">
+                                        <h5>Total:</h5>
+                                        <h5 id="order-total">₹0.00</h5>
+                                    </div>
+                                    
+                                    <div class="d-grid gap-2">
+                                        <button class="btn btn-success" id="confirm-order">
+                                            <i class="fas fa-check me-1"></i> Confirm Order
+                                        </button>
+                                        <button class="btn btn-danger" id="clear-order">
+                                            <i class="fas fa-trash me-1"></i> Clear Order
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Kitchen View Section -->
+                <div id="kitchen" class="content-section">
+                    <h3><i class="fas fa-utensils me-2"></i>Kitchen View</h3>
+                    <hr>
+                    <div class="row mb-4">
+                        <div class="col-md-12">
+                            <div class="card">
+                                <div class="card-header d-flex justify-content-between align-items-center">
+                                    <h5 class="mb-0">Pending Orders</h5>
+                                    <button class="btn btn-sm btn-outline-primary" id="refresh-kitchen">
+                                        <i class="fas fa-sync-alt me-1"></i> Refresh
+                                    </button>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row" id="kitchen-orders">
+                                        <!-- Orders will be loaded here -->
+                                        <div class="col-12 text-center py-4">
+                                            <i class="fas fa-utensils fa-3x text-muted mb-3"></i>
+                                            <p class="text-muted">No pending orders</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5 class="mb-0">Completed Orders</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="table-responsive">
+                                        <table class="table table-hover">
+                                            <thead>
+                                                <tr>
+                                                    <th>Order ID</th>
+                                                    <th>Table</th>
+                                                    <th>Items</th>
+                                                    <th>Time</th>
+                                                    <th>Status</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="completed-orders">
+                                                <tr>
+                                                    <td colspan="5" class="text-center">No completed orders</td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Menu Management Section -->
+                <div id="menu" class="content-section">
+                    <h3><i class="fas fa-list me-2"></i>Menu Management</h3>
+                    <hr>
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5 class="mb-0">Add New Menu Item</h5>
+                                </div>
+                                <div class="card-body">
+                                    <form id="add-menu-item-form">
+                                        <div class="mb-3">
+                                            <label for="item-name" class="form-label">Item Name</label>
+                                            <input type="text" class="form-control" id="item-name" required>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label for="item-price" class="form-label">Price</label>
+                                            <input type="number" class="form-control" id="item-price" required min="0" step="0.01">
+                                        </div>
+                                        <div class="mb-3">
+                                            <label for="item-category" class="form-label">Category</label>
+                                            <select class="form-select" id="item-category" required>
+                                                <option value="">Select Category</option>
+                                                <!-- Categories will be loaded here -->
+                                            </select>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label for="item-image" class="form-label">Image URL</label>
+                                            <input type="url" class="form-control" id="item-image" placeholder="https://...">
+                                        </div>
+                                        <button type="submit" class="btn btn-primary">Add Item</button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5 class="mb-0">Add New Category</h5>
+                                </div>
+                                <div class="card-body">
+                                    <form id="add-category-form">
+                                        <div class="mb-3">
+                                            <label for="category-name" class="form-label">Category Name</label>
+                                            <input type="text" class="form-control" id="category-name" required>
+                                        </div>
+                                        <button type="submit" class="btn btn-primary">Add Category</button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <h4>Menu Items</h4>
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Price</th>
+                                    <th>Category</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="menu-items-table">
+                                <!-- Menu items will be loaded here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                
+                <!-- Reports Section -->
+                <div id="reports" class="content-section">
+                    <h3><i class="fas fa-chart-bar me-2"></i>Reports</h3>
+                    <hr>
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5 class="mb-0">Date Range</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="mb-3">
+                                        <label for="report-start-date" class="form-label">Start Date</label>
+                                        <input type="date" class="form-control" id="report-start-date">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="report-end-date" class="form-label">End Date</label>
+                                        <input type="date" class="form-control" id="report-end-date">
+                                    </div>
+                                    <button class="btn btn-primary" id="generate-report">Generate Report</button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5 class="mb-0">Report Summary</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between mb-2">
+                                        <span>Total Orders:</span>
+                                        <span id="report-total-orders">0</span>
+                                    </div>
+                                    <div class="d-flex justify-content-between mb-2">
+                                        <span>Total Revenue:</span>
+                                        <span id="report-total-revenue">₹0.00</span>
+                                    </div>
+                                    <div class="d-flex justify-content-between mb-2">
+                                        <span>Average Order Value:</span>
+                                        <span id="report-avg-order">₹0.00</span>
+                                    </div>
+                                    <div class="d-flex justify-content-between">
+                                        <span>Most Popular Item:</span>
+                                        <span id="report-popular-item">-</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">Order Details</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-striped">
+                                    <thead>
+                                        <tr>
+                                            <th>Order ID</th>
+                                            <th>Date</th>
+                                            <th>Customer</th>
+                                            <th>Type</th>
+                                            <th>Items</th>
+                                            <th>Total</th>
+                                            <th>Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="report-orders">
+                                        <tr>
+                                            <td colspan="7" class="text-center">Select a date range to generate report</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Settings Section -->
+                <div id="settings" class="content-section">
+                    <h3><i class="fas fa-cog me-2"></i>Settings</h3>
+                    <hr>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="card mb-4">
+                                <div class="card-header">
+                                    <h5 class="mb-0">Restaurant Settings</h5>
+                                </div>
+                                <div class="card-body">
+                                    <form id="restaurant-settings-form">
+                                        <div class="mb-3">
+                                            <label for="restaurant-name" class="form-label">Restaurant Name</label>
+                                            <input type="text" class="form-control" id="restaurant-name" value="My Restaurant">
+                                        </div>
+                                        <div class="mb-3">
+                                            <label for="currency-symbol" class="form-label">Currency Symbol</label>
+                                            <input type="text" class="form-control" id="currency-symbol" value="₹" maxlength="3">
+                                        </div>
+                                        <div class="mb-3">
+                                            <label for="tax-rate" class="form-label">Tax Rate (%)</label>
+                                            <input type="number" class="form-control" id="tax-rate" value="5" min="0" max="30" step="0.1">
+                                        </div>
+                                        <button type="submit" class="btn btn-primary">Save Settings</button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5 class="mb-0">System Actions</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="d-grid gap-2">
+                                        <button class="btn btn-outline-danger mb-2" id="reset-data">
+                                            <i class="fas fa-trash me-1"></i> Reset All Data
+                                        </button>
+                                        <button class="btn btn-outline-info mb-2" id="export-data">
+                                            <i class="fas fa-download me-1"></i> Export Data
+                                        </button>
+                                        <button class="btn btn-outline-warning" id="import-data">
+                                            <i class="fas fa-upload me-1"></i> Import Data
+                                        </button>
+                                        <input type="file" id="import-file" class="d-none" accept=".json">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Tablet View Section -->
+                <div id="tablet" class="content-section">
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <h3><i class="fas fa-tablet-alt me-2"></i>Tablet Order Booking</h3>
+                        <div>
+                            <span class="badge bg-info me-2" id="tablet-id-display">Tablet ID: Not Set</span>
+                            <button class="btn btn-sm btn-outline-primary" id="refresh-tablet">
+                                <i class="fas fa-sync-alt me-1"></i> Refresh
+                            </button>
+                        </div>
+                    </div>
+                    <hr>
+                    
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        This tablet view is designed for order taking. Orders will be synchronized with the main POS when connected.
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-8">
+                            <div class="tablet-view">
+                                <h5>Menu Categories</h5>
+                                <div id="tablet-categories" class="d-flex flex-wrap mb-3">
+                                    <!-- Categories will be loaded here -->
+                                </div>
+                                
+                                <h5>Menu Items</h5>
+                                <div class="row" id="tablet-menu-items">
+                                    <!-- Menu items will be loaded here -->
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-4">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5 class="mb-0">Current Order</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="mb-3">
+                                        <label for="tablet-customer-name" class="form-label">Customer Name</label>
+                                        <input type="text" class="form-control" id="tablet-customer-name" placeholder="Enter customer name">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="tablet-customer-phone" class="form-label">Customer Phone</label>
+                                        <input type="tel" class="form-control" id="tablet-customer-phone" placeholder="Enter phone number">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="tablet-order-type" class="form-label">Order Type</label>
+                                        <select class="form-select" id="tablet-order-type">
+                                            <option value="dine-in">Dine-In</option>
+                                            <option value="takeaway">Takeaway</option>
+                                            <option value="delivery">Delivery</option>
+                                        </select>
+                                    </div>
+                                    <div class="mb-3" id="tablet-table-section">
+                                        <label for="tablet-table-number" class="form-label">Table Number</label>
+                                        <select class="form-select" id="tablet-table-number">
+                                            <!-- Tables will be loaded here -->
+                                        </select>
+                                    </div>
+                                    <hr>
+                                    
+                                    <div id="tablet-order-items" style="max-height: 200px; overflow-y: auto;">
+                                        <!-- Order items will be displayed here -->
+                                        <p class="text-muted text-center">No items added yet</p>
+                                    </div>
+                                    
+                                    <hr>
+                                    <div class="d-flex justify-content-between mb-2">
+                                        <span>Subtotal:</span>
+                                        <span id="tablet-order-subtotal">₹0.00</span>
+                                    </div>
+                                    <div class="d-flex justify-content-between mb-2">
+                                        <span>Tax (<span id="tablet-tax-rate">5</span>%):</span>
+                                        <span id="tablet-order-tax">₹0.00</span>
+                                    </div>
+                                    <div class="d-flex justify-content-between">
+                                        <h5>Total:</h5>
+                                        <h5 id="tablet-order-total">₹0.00</h5>
+                                    </div>
+                                    
+                                    <div class="d-grid gap-2 mt-3">
+                                        <button class="btn btn-success" id="tablet-confirm-order">
+                                            <i class="fas fa-check me-1"></i> Confirm Order
+                                        </button>
+                                        <button class="btn btn-danger" id="tablet-clear-order">
+                                            <i class="fas fa-trash me-1"></i> Clear Order
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="card mt-3">
+                                <div class="card-header">
+                                    <h5 class="mb-0">Connection Status</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="mb-2">
+                                        <span class="fw-bold">Status: </span>
+                                        <span id="tablet-connection-status" class="badge bg-warning">Disconnected</span>
+                                    </div>
+                                    <div class="mb-2">
+                                        <span class="fw-bold">Last Sync: </span>
+                                        <span id="tablet-last-sync">Never</span>
+                                    </div>
+                                    <button class="btn btn-sm btn-outline-primary w-100" id="tablet-manual-sync">
+                                        <i class="fas fa-sync me-1"></i> Manual Sync
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Toast -->
+    <div class="toast-container position-fixed top-0 end-0 p-3">
+        <div id="notification-toast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="toast-header">
+                <strong class="me-auto" id="toast-title">Notification</strong>
+                <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+            <div class="toast-body" id="toast-message">
+                Hello, world! This is a toast message.
+            </div>
+        </div>
+    </div>
+
+    <!-- Network Status Indicator -->
+    <div class="network-status network-offline" id="network-status">
+        <i class="fas fa-wifi"></i> Offline Mode
+    </div>
+
+    <!-- Bootstrap JS Bundle with Popper -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Initialize sample data
+        let restaurantData = {
+            name: "My Restaurant",
+            menuItems: [
+                { id: 'item1', name: 'Margherita Pizza', price: 8.99, category: 'Main Course', image: 'https://via.placeholder.com/300x200/FF0000/FFFFFF?text=Pizza' },
+                { id: 'item2', name: 'Pepperoni Pizza', price: 10.99, category: 'Main Course', image: 'https://via.placeholder.com/300x200/FF0000/FFFFFF?text=Pepperoni' },
+                { id: 'item3', name: 'Caesar Salad', price: 6.99, category: 'Appetizers', image: 'https://via.placeholder.com/300x200/00FF00/FFFFFF?text=Salad' },
+                { id: 'item4', name: 'Garlic Bread', price: 4.99, category: 'Appetizers', image: 'https://via.placeholder.com/300x200/FFFF00/000000?text=Bread' },
+                { id: 'item5', name: 'Chocolate Cake', price: 5.99, category: 'Desserts', image: 'https://via.placeholder.com/300x200/800080/FFFFFF?text=Cake' },
+                { id: 'item6', name: 'Ice Cream', price: 3.99, category: 'Desserts', image: 'https://via.placeholder.com/300x200/ADD8E6/000000?text=Ice+Cream' },
+                { id: 'item7', name: 'Coca Cola', price: 2.49, category: 'Beverages', image: 'https://via.placeholder.com/300x200/0000FF/FFFFFF?text=Cola' },
+                { id: 'item8', name: 'Orange Juice', price: 3.49, category: 'Beverages', image: 'https://via.placeholder.com/300x200/FFA500/FFFFFF?text=Juice' }
+            ],
+            categories: ['Main Course', 'Appetizers', 'Desserts', 'Beverages'],
+            tables: [
+                { number: 1, capacity: 4, status: 'available' },
+                { number: 2, capacity: 2, status: 'available' },
+                { number: 3, capacity: 6, status: 'available' },
+                { number: 4, capacity: 4, status: 'available' },
+                { number: 5, capacity: 8, status: 'available' }
+            ],
+            settings: {
+                currencySymbol: '₹',
+                taxRate: 5
+            },
+            orders: []
+        };
+
+        // Initialize localStorage data if not exists
+        if (!localStorage.getItem('restaurantData')) {
+            localStorage.setItem('restaurantData', JSON.stringify(restaurantData));
+        } else {
+            restaurantData = JSON.parse(localStorage.getItem('restaurantData'));
+        }
+
+        // Initialize tabletPendingOrders if not exists
+        if (!localStorage.getItem('tabletPendingOrders')) {
+            localStorage.setItem('tabletPendingOrders', '[]');
+        }
+
+        // Save data to localStorage
+        function saveData() {
+            localStorage.setItem('restaurantData', JSON.stringify(restaurantData));
+        }
+
+        // Show notification
+        function showNotification(message, type = 'info') {
+            const toast = new bootstrap.Toast(document.getElementById('notification-toast'));
+            const toastBody = document.getElementById('toast-message');
+            
+            // Set message and style based on type
+            toastBody.textContent = message;
+            toastBody.className = 'toast-body';
+            
+            if (type === 'success') {
+                toastBody.classList.add('text-success');
+            } else if (type === 'warning') {
+                toastBody.classList.add('text-warning');
+            } else if (type === 'error') {
+                toastBody.classList.add('text-danger');
+            }
+            
+            toast.show();
+        }
+
+        // Update table status
+        function updateTableStatus(tableNumber, status, orderId = null) {
+            const table = restaurantData.tables.find(t => t.number === tableNumber);
+            if (table) {
+                table.status = status;
+                if (orderId) table.orderId = orderId;
+                saveData();
+                updateTablesView();
+            }
+        }
+
+        // Update dashboard stats
+        function updateDashboard() {
+            // Today's orders
+            const today = new Date().toDateString();
+            const todaysOrders = restaurantData.orders.filter(order => new Date(order.date).toDateString() === today);
+            document.getElementById('today-orders').textContent = todaysOrders.length;
+            
+            // Today's revenue
+            const revenue = todaysOrders.reduce((sum, order) => {
+                const orderTotal = order.items.reduce((orderSum, item) => orderSum + (item.price * item.quantity), 0);
+                return sum + orderTotal;
+            }, 0);
+            document.getElementById('today-revenue').textContent = `${restaurantData.settings.currencySymbol}${revenue.toFixed(2)}`;
+            
+            // Active tables
+            const activeTables = restaurantData.tables.filter(table => table.status === 'occupied').length;
+            document.getElementById('active-tables').textContent = `${activeTables}/${restaurantData.tables.length}`;
+            
+            // Pending orders
+            const pendingOrders = restaurantData.orders.filter(order => order.status === 'pending').length;
+            document.getElementById('pending-orders').textContent = pendingOrders;
+            
+            // Recent orders
+            const recentOrdersContainer = document.getElementById('recent-orders');
+            recentOrdersContainer.innerHTML = '';
+            
+            if (restaurantData.orders.length === 0) {
+                recentOrdersContainer.innerHTML = '<tr><td colspan="5" class="text-center">No recent orders</td></tr>';
+            } else {
+                const recentOrders = [...restaurantData.orders].reverse().slice(0, 5);
+                recentOrders.forEach(order => {
+                    const orderTotal = order.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${order.id}</td>
+                        <td>${order.tableNumber || 'N/A'}</td>
+                        <td>${order.customerName}</td>
+                        <td>${restaurantData.settings.currencySymbol}${orderTotal.toFixed(2)}</td>
+                        <td><span class="badge bg-${order.status === 'completed' ? 'success' : 'warning'}">${order.status}</span></td>
+                    `;
+                    recentOrdersContainer.appendChild(row);
+                });
+            }
+        }
+
+        // Update tables view
+        function updateTablesView() {
+            const tablesContainer = document.getElementById('tables-container');
+            tablesContainer.innerHTML = '';
+            
+            restaurantData.tables.forEach(table => {
+                const col = document.createElement('div');
+                col.className = 'col-md-3 mb-3';
+                
+                const card = document.createElement('div');
+                card.className = `card text-center table-status-${table.status}`;
+                card.innerHTML = `
+                    <div class="card-body">
+                        <h5 class="card-title">Table ${table.number}</h5>
+                        <p class="card-text">Capacity: ${table.capacity} people</p>
+                        <p class="card-text">
+                            <span class="badge bg-${table.status === 'available' ? 'success' : 'danger'}">${table.status}</span>
+                        </p>
+                        ${table.status === 'occupied' ? `
+                            <button class="btn btn-sm btn-warning free-table-btn" data-table="${table.number}">Free Table</button>
+                        ` : ''}
+                        <button class="btn btn-sm btn-danger delete-table-btn" data-table="${table.number}">Delete</button>
+                    </div>
+                `;
+                
+                col.appendChild(card);
+                tablesContainer.appendChild(col);
+            });
+            
+            // Add event listeners to free table buttons
+            document.querySelectorAll('.free-table-btn').forEach(button => {
+                button.addEventListener('click', (e) => {
+                    const tableNumber = parseInt(e.target.dataset.table);
+                    updateTableStatus(tableNumber, 'available');
+                    showNotification(`Table ${tableNumber} is now available`, 'success');
+                });
+            });
+            
+            // Add event listeners to delete table buttons
+            document.querySelectorAll('.delete-table-btn').forEach(button => {
+                button.addEventListener('click', (e) => {
+                    const tableNumber = parseInt(e.target.dataset.table);
+                    if (confirm(`Are you sure you want to delete Table ${tableNumber}?`)) {
+                        restaurantData.tables = restaurantData.tables.filter(t => t.number !== tableNumber);
+                        saveData();
+                        updateTablesView();
+                        showNotification(`Table ${tableNumber} deleted`, 'success');
+                    }
+                });
+            });
+        }
+
+        // Update menu items for order section
+        function updateMenuItems(category = 'all') {
+            const menuItemsContainer = document.getElementById('menu-items-container');
+            menuItemsContainer.innerHTML = '';
+            
+            let itemsToShow = [...restaurantData.menuItems];
+            
+            if (category !== 'all') {
+                itemsToShow = itemsToShow.filter(item => item.category === category);
+            }
+            
+            if (itemsToShow.length === 0) {
+                menuItemsContainer.innerHTML = `
+                    <div class="col-12 text-center text-muted py-4">
+                        <i class="fas fa-utensils fa-3x mb-3"></i>
+                        <p>No items found</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            itemsToShow.forEach(item => {
+                const col = document.createElement('div');
+                col.className = 'col-md-6 col-lg-4 mb-3';
+                
+                const card = document.createElement('div');
+                card.className = 'card menu-item';
+                card.innerHTML = `
+                    <img src="${item.image}" class="card-img-top menu-item-img" alt="${item.name}">
+                    <div class="card-body">
+                        <h6 class="card-title">${item.name}</h6>
+                        <p class="card-text">${restaurantData.settings.currencySymbol}${item.price.toFixed(2)}</p>
+                        <button class="btn btn-sm btn-primary w-100 add-to-order" data-id="${item.id}">Add to Order</button>
+                    </div>
+                `;
+                
+                col.appendChild(card);
+                menuItemsContainer.appendChild(col);
+            });
+            
+            // Add event listeners to add-to-order buttons
+            document.querySelectorAll('.add-to-order').forEach(button => {
+                button.addEventListener('click', (e) => {
+                    const itemId = e.target.dataset.id;
+                    addItemToOrder(itemId);
+                });
+            });
+        }
+
+        // Update menu items table for management
+        function updateMenuItemsTable() {
+            const menuItemsTable = document.getElementById('menu-items-table');
+            menuItemsTable.innerHTML = '';
+            
+            restaurantData.menuItems.forEach(item => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${item.name}</td>
+                    <td>${restaurantData.settings.currencySymbol}${item.price.toFixed(2)}</td>
+                    <td>${item.category}</td>
+                    <td>
+                        <button class="btn btn-sm btn-danger delete-menu-item" data-id="${item.id}">Delete</button>
+                    </td>
+                `;
+                menuItemsTable.appendChild(row);
+            });
+            
+            // Add event listeners to delete buttons
+            document.querySelectorAll('.delete-menu-item').forEach(button => {
+                button.addEventListener('click', (e) => {
+                    const itemId = e.target.dataset.id;
+                    const item = restaurantData.menuItems.find(i => i.id === itemId);
+                    if (confirm(`Are you sure you want to delete ${item.name}?`)) {
+                        restaurantData.menuItems = restaurantData.menuItems.filter(i => i.id !== itemId);
+                        saveData();
+                        updateMenuItemsTable();
+                        showNotification(`${item.name} deleted from menu`, 'success');
+                    }
+                });
+            });
+        }
+
+        // Update categories dropdown
+        function updateCategoriesDropdown() {
+            const categoryFilter = document.getElementById('menu-category-filter');
+            const itemCategory = document.getElementById('item-category');
+            
+            // Clear existing options except the first one
+            while (categoryFilter.options.length > 1) {
+                categoryFilter.remove(1);
+            }
+            while (itemCategory.options.length > 1) {
+                itemCategory.remove(1);
+            }
+            
+            // Add categories to dropdowns
+            restaurantData.categories.forEach(category => {
+                const option1 = document.createElement('option');
+                option1.value = category;
+                option1.textContent = category;
+                categoryFilter.appendChild(option1);
+                
+                const option2 = document.createElement('option');
+                option2.value = category;
+                option2.textContent = category;
+                itemCategory.appendChild(option2);
+            });
+        }
+
+        // Update kitchen orders
+        function updateKitchenOrders() {
+            const kitchenOrders = document.getElementById('kitchen-orders');
+            const completedOrders = document.getElementById('completed-orders');
+            
+            // Clear existing content
+            kitchenOrders.innerHTML = '';
+            completedOrders.innerHTML = '';
+            
+            // Get pending orders
+            const pendingOrders = restaurantData.orders.filter(order => order.status === 'pending' || order.status === 'preparing');
+            
+            if (pendingOrders.length === 0) {
+                kitchenOrders.innerHTML = `
+                    <div class="col-12 text-center py-4">
+                        <i class="fas fa-utensils fa-3x text-muted mb-3"></i>
+                        <p class="text-muted">No pending orders</p>
+                    </div>
+                `;
+            } else {
+                pendingOrders.forEach(order => {
+                    const orderTotal = order.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+                    const col = document.createElement('div');
+                    col.className = 'col-md-6';
+                    
+                    const card = document.createElement('div');
+                    card.className = `card kitchen-order ${order.urgent ? 'urgent' : ''} ${order.status === 'ready' ? 'ready' : ''}`;
+                    card.innerHTML = `
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <h5 class="card-title mb-0">Order #${order.id}</h5>
+                                <span class="badge bg-${order.status === 'ready' ? 'success' : 'warning'} order-status-badge" data-order="${order.id}">${order.status}</span>
+                            </div>
+                            <p class="card-text mb-1">Table: ${order.tableNumber || 'N/A'}</p>
+                            <p class="card-text mb-2">Customer: ${order.customerName}</p>
+                            <h6>Items:</h6>
+                            <ul class="list-group mb-3">
+                                ${order.items.map(item => `
+                                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                                        ${item.name}
+                                        <span class="badge bg-primary rounded-pill">${item.quantity}</span>
+                                    </li>
+                                `).join('')}
+                            </ul>
+                            <div class="d-flex justify-content-between">
+                                <span>Total: ${restaurantData.settings.currencySymbol}${orderTotal.toFixed(2)}</span>
+                                <div>
+                                    ${order.status !== 'ready' ? `
+                                        <button class="btn btn-sm btn-success ready-order-btn" data-order="${order.id}">Mark Ready</button>
+                                    ` : ''}
+                                    <button class="btn btn-sm btn-primary complete-order-btn" data-order="${order.id}">Complete</button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    
+                    col.appendChild(card);
+                    kitchenOrders.appendChild(col);
+                });
+            }
+            
+            // Get completed orders
+            const completedOrdersList = restaurantData.orders.filter(order => order.status === 'completed').reverse().slice(0, 10);
+            
+            if (completedOrdersList.length === 0) {
+                completedOrders.innerHTML = '<tr><td colspan="7" class="text-center">No completed orders</td></tr>';
+            } else {
+                completedOrdersList.forEach(order => {
+                    const orderTotal = order.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${order.id}</td>
+                        <td>${order.tableNumber || 'N/A'}</td>
+                        <td>${order.items.length} items</td>
+                        <td>${new Date(order.date).toLocaleTimeString()}</td>
+                        <td><span class="badge bg-success">${order.status}</span></td>
+                    `;
+                    completedOrders.appendChild(row);
+                });
+            }
+            
+            // Add event listeners to ready buttons
+            document.querySelectorAll('.ready-order-btn').forEach(button => {
+                button.addEventListener('click', (e) => {
+                    const orderId = e.target.dataset.order;
+                    const order = restaurantData.orders.find(o => o.id === orderId);
+                    if (order) {
+                        order.status = 'ready';
+                        saveData();
+                        updateKitchenOrders();
+                        showNotification(`Order #${orderId} is ready`, 'success');
+                    }
+                });
+            });
+            
+            // Add event listeners to complete buttons
+            document.querySelectorAll('.complete-order-btn').forEach(button => {
+                button.addEventListener('click', (e) => {
+                    const orderId = e.target.dataset.order;
+                    const order = restaurantData.orders.find(o => o.id === orderId);
+                    if (order) {
+                        order.status = 'completed';
+                        if (order.tableNumber) {
+                            updateTableStatus(order.tableNumber, 'available');
+                        }
+                        saveData();
+                        updateKitchenOrders();
+                        updateDashboard();
+                        showNotification(`Order #${orderId} completed`, 'success');
+                    }
+                });
+            });
+            
+            // Add event listeners to status badges
+            document.querySelectorAll('.order-status-badge').forEach(badge => {
+                badge.addEventListener('click', (e) => {
+                    const orderId = e.target.dataset.order;
+                    const order = restaurantData.orders.find(o => o.id === orderId);
+                    if (order) {
+                        order.urgent = !order.urgent;
+                        saveData();
+                        updateKitchenOrders();
+                        showNotification(`Order #${orderId} marked as ${order.urgent ? 'urgent' : 'normal'}`, 'info');
+                    }
+                });
+            });
+        }
+
+        // Generate report
+        function generateReport() {
+            const startDate = document.getElementById('report-start-date').value;
+            const endDate = document.getElementById('report-end-date').value;
+            
+            if (!startDate || !endDate) {
+                showNotification('Please select both start and end dates', 'warning');
+                return;
+            }
+            
+            const start = new Date(startDate);
+            const end = new Date(endDate);
+            end.setHours(23, 59, 59, 999); // End of the day
+            
+            // Filter orders by date range
+            const filteredOrders = restaurantData.orders.filter(order => {
+                const orderDate = new Date(order.date);
+                return orderDate >= start && orderDate <= end;
+            });
+            
+            // Update report summary
+            document.getElementById('report-total-orders').textContent = filteredOrders.length;
+            
+            const totalRevenue = filteredOrders.reduce((sum, order) => {
+                const orderTotal = order.items.reduce((orderSum, item) => orderSum + (item.price * item.quantity), 0);
+                return sum + orderTotal;
+            }, 0);
+            document.getElementById('report-total-revenue').textContent = `${restaurantData.settings.currencySymbol}${totalRevenue.toFixed(2)}`;
+            
+            const avgOrderValue = filteredOrders.length > 0 ? totalRevenue / filteredOrders.length : 0;
+            document.getElementById('report-avg-order').textContent = `${restaurantData.settings.currencySymbol}${avgOrderValue.toFixed(2)}`;
+            
+            // Find most popular item
+            const itemCounts = {};
+            filteredOrders.forEach(order => {
+                order.items.forEach(item => {
+                    if (itemCounts[item.name]) {
+                        itemCounts[item.name] += item.quantity;
+                    } else {
+                        itemCounts[item.name] = item.quantity;
+                    }
+                });
+            });
+            
+            let popularItem = '-';
+            let maxCount = 0;
+            for (const item in itemCounts) {
+                if (itemCounts[item] > maxCount) {
+                    maxCount = itemCounts[item];
+                    popularItem = item;
+                }
+            }
+            document.getElementById('report-popular-item').textContent = popularItem;
+            
+            // Update report orders table
+            const reportOrders = document.getElementById('report-orders');
+            reportOrders.innerHTML = '';
+            
+            if (filteredOrders.length === 0) {
+                reportOrders.innerHTML = '<tr><td colspan="7" class="text-center">No orders found in the selected date range</td></tr>';
+            } else {
+                filteredOrders.forEach(order => {
+                    const orderTotal = order.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${order.id}</td>
+                        <td>${new Date(order.date).toLocaleDateString()}</td>
+                        <td>${order.customerName}</td>
+                        <td>${order.orderType}</td>
+                        <td>${order.items.map(item => `${item.name} (x${item.quantity})`).join(', ')}</td>
+                        <td>${restaurantData.settings.currencySymbol}${orderTotal.toFixed(2)}</td>
+                        <td><span class="badge bg-${order.status === 'completed' ? 'success' : 'warning'}">${order.status}</span></td>
+                    `;
+                    reportOrders.appendChild(row);
+                });
+            }
+        }
+
+        // Current order for new order section
+        let currentOrder = {
+            items: [],
+            customerName: "",
+            customerPhone: "",
+            orderType: "dine-in",
+            tableNumber: null
+        };
+
+        // Add item to current order
+        function addItemToOrder(itemId) {
+            const item = restaurantData.menuItems.find(i => i.id === itemId);
+            if (!item) return;
+            
+            // Check if item already exists in order
+            const existingItem = currentOrder.items.find(i => i.id === itemId);
+            if (existingItem) {
+                existingItem.quantity += 1;
+            } else {
+                currentOrder.items.push({
+                    id: item.id,
+                    name: item.name,
+                    price: item.price,
+                    quantity: 1
+                });
+            }
+            
+            updateOrderItems();
+            showNotification(`${item.name} added to order`, 'success');
+        }
+
+        // Update order items display
+        function updateOrderItems() {
+            const orderItemsContainer = document.getElementById('order-items');
+            
+            if (currentOrder.items.length === 0) {
+                orderItemsContainer.innerHTML = '<p class="text-muted text-center">No items added yet</p>';
+                updateOrderTotals();
+                return;
+            }
+            
+            orderItemsContainer.innerHTML = '';
+            
+            currentOrder.items.forEach((item, index) => {
+                const itemDiv = document.createElement('div');
+                itemDiv.className = 'order-item d-flex justify-content-between align-items-center';
+                itemDiv.innerHTML = `
+                    <div>
+                        <h6 class="mb-0">${item.name}</h6>
+                        <small class="text-muted">${restaurantData.settings.currencySymbol}${item.price.toFixed(2)} × ${item.quantity}</small>
+                    </div>
+                    <div class="d-flex align-items-center">
+                        <div class="btn-group btn-group-sm me-2">
+                            <button class="btn btn-outline-secondary decrease-item" data-index="${index}">
+                                <i class="fas fa-minus"></i>
+                            </button>
+                            <button class="btn btn-outline-secondary increase-item" data-index="${index}">
+                                <i class="fas fa-plus"></i>
+                            </button>
+                        </div>
+                        <span class="me-3">${restaurantData.settings.currencySymbol}${(item.price * item.quantity).toFixed(2)}</span>
+                        <button class="btn btn-sm btn-outline-danger remove-item" data-index="${index}">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                `;
+                orderItemsContainer.appendChild(itemDiv);
+            });
+            
+            // Add event listeners to remove buttons
+            document.querySelectorAll('.remove-item').forEach(button => {
+                button.addEventListener('click', (e) => {
+                    const index = parseInt(e.target.closest('button').dataset.index);
+                    removeItemFromOrder(index);
+                });
+            });
+            
+            // Add event listeners to increase buttons
+            document.querySelectorAll('.increase-item').forEach(button => {
+                button.addEventListener('click', (e) => {
+                    const index = parseInt(e.target.closest('button').dataset.index);
+                    increaseItemQuantity(index);
+                });
+            });
+            
+            // Add event listeners to decrease buttons
+            document.querySelectorAll('.decrease-item').forEach(button => {
+                button.addEventListener('click', (e) => {
+                    const index = parseInt(e.target.closest('button').dataset.index);
+                    decreaseItemQuantity(index);
+                });
+            });
+            
+            // Update totals
+            updateOrderTotals();
+        }
+
+        // Remove item from current order
+        function removeItemFromOrder(index) {
+            const removedItem = currentOrder.items[index];
+            currentOrder.items.splice(index, 1);
+            updateOrderItems();
+            showNotification(`${removedItem.name} removed from order`, 'info');
+        }
+
+        // Increase item quantity in current order
+        function increaseItemQuantity(index) {
+            currentOrder.items[index].quantity += 1;
+            updateOrderItems();
+        }
+
+        // Decrease item quantity in current order
+        function decreaseItemQuantity(index) {
+            if (currentOrder.items[index].quantity > 1) {
+                currentOrder.items[index].quantity -= 1;
+                updateOrderItems();
+            } else {
+                removeItemFromOrder(index);
+            }
+        }
+
+        // Update order totals
+        function updateOrderTotals() {
+            const subtotal = currentOrder.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+            const tax = subtotal * (restaurantData.settings.taxRate / 100);
+            const total = subtotal + tax;
+            
+            document.getElementById('order-subtotal').textContent = `${restaurantData.settings.currencySymbol}${subtotal.toFixed(2)}`;
+            document.getElementById('order-tax').textContent = `${restaurantData.settings.currencySymbol}${tax.toFixed(2)}`;
+            document.getElementById('order-total').textContent = `${restaurantData.settings.currencySymbol}${total.toFixed(2)}`;
+            
+            // Update tax rate display
+            document.getElementById('order-tax-rate').textContent = restaurantData.settings.taxRate;
+        }
+
+        // Confirm current order
+        function confirmCurrentOrder() {
+            if (currentOrder.items.length === 0) {
+                showNotification('Please add items to the order before confirming', 'warning');
+                return;
+            }
+            
+            // Get values from form
+            currentOrder.customerName = document.getElementById('order-customer-name').value || 'Walk-in Customer';
+            currentOrder.customerPhone = document.getElementById('order-customer-phone').value || '';
+            currentOrder.orderType = document.getElementById('order-type').value;
+            
+            if (currentOrder.orderType === 'dine-in') {
+                currentOrder.tableNumber = parseInt(document.getElementById('order-table-number').value) || null;
+                
+                if (!currentOrder.tableNumber) {
+                    showNotification('Please select a table for dine-in orders', 'warning');
+                    return;
+                }
+            } else {
+                currentOrder.tableNumber = null;
+            }
+            
+            // Create order object
+            const order = {
+                id: 'ORD-' + Date.now().toString().slice(-6) + Math.random().toString(36).substr(2, 3).toUpperCase(),
+                items: [...currentOrder.items],
+                customerName: currentOrder.customerName,
+                customerPhone: currentOrder.customerPhone,
+                orderType: currentOrder.orderType,
+                tableNumber: currentOrder.tableNumber,
+                date: new Date().toISOString(),
+                status: 'pending',
+                kitchenStatus: 'pending'
+            };
+            
+            // Add to orders
+            restaurantData.orders.push(order);
+            
+            // Update table status if dine-in
+            if (order.orderType === 'dine-in' && order.tableNumber) {
+                updateTableStatus(order.tableNumber, 'occupied', order.id);
+            }
+            
+            // Save data and update UI
+            saveData();
+            updateDashboard();
+            resetCurrentOrder();
+            
+            showNotification(`Order #${order.id} confirmed successfully`, 'success');
+        }
+
+        // Reset current order
+        function resetCurrentOrder() {
+            currentOrder.items = [];
+            currentOrder.customerName = "";
+            currentOrder.customerPhone = "";
+            document.getElementById('order-customer-name').value = "";
+            document.getElementById('order-customer-phone').value = "";
+            document.getElementById('order-type').value = "dine-in";
+            document.getElementById('order-table-number').value = "";
+            
+            updateOrderItems();
+        }
+
+        // Update table dropdown for order section
+        function updateTableDropdown() {
+            const tableSelect = document.getElementById('order-table-number');
+            tableSelect.innerHTML = '';
+            
+            // Add default option
+            const defaultOption = document.createElement('option');
+            defaultOption.value = '';
+            defaultOption.textContent = 'Select Table';
+            tableSelect.appendChild(defaultOption);
+            
+            restaurantData.tables.forEach(table => {
+                if (table.status === 'available') {
+                    const option = document.createElement('option');
+                    option.value = table.number;
+                    option.textContent = `Table ${table.number} (${table.capacity} seats)`;
+                    tableSelect.appendChild(option);
+                }
+            });
+            
+            // Set current table in dropdown
+            if (currentOrder.tableNumber) {
+                tableSelect.value = currentOrder.tableNumber;
+            }
+        }
+
+        // Show/hide table selection based on order type
+        function toggleTableSelection() {
+            const orderType = document.getElementById('order-type').value;
+            const tableSection = document.getElementById('order-table-section');
+            
+            if (orderType === 'dine-in') {
+                tableSection.style.display = 'block';
+                updateTableDropdown();
+            } else {
+                tableSection.style.display = 'none';
+                currentOrder.tableNumber = null;
+            }
+        }
+
+        // Sidebar navigation
+        document.querySelectorAll('.nav-link').forEach(link => {
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+                
+                // Remove active class from all links
+                document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+                
+                // Add active class to clicked link
+                this.classList.add('active');
+                
+                // Hide all content sections
+                document.querySelectorAll('.content-section').forEach(section => {
+                    section.classList.remove('active');
+                });
+                
+                // Show the selected section
+                const sectionId = this.getAttribute('data-section');
+                document.getElementById(sectionId).classList.add('active');
+                
+                // Initialize section if needed
+                if (sectionId === 'tablet') {
+                    initTablet();
+                } else if (sectionId === 'dashboard') {
+                    updateDashboard();
+                } else if (sectionId === 'tables') {
+                    updateTablesView();
+                } else if (sectionId === 'orders') {
+                    updateMenuItems();
+                    updateTableDropdown();
+                } else if (sectionId === 'kitchen') {
+                    updateKitchenOrders();
+                } else if (sectionId === 'menu') {
+                    updateMenuItemsTable();
+                    updateCategoriesDropdown();
+                } else if (sectionId === 'settings') {
+                    // Load current settings
+                    document.getElementById('restaurant-name').value = restaurantData.name;
+                    document.getElementById('currency-symbol').value = restaurantData.settings.currencySymbol;
+                    document.getElementById('tax-rate').value = restaurantData.settings.taxRate;
+                }
+            });
+        });
+
+        // Tablet-specific functionality
+        let tabletOrder = {
+            items: [],
+            customerName: "",
+            customerPhone: "",
+            orderType: "dine-in",
+            tableNumber: null,
+            date: new Date(),
+            status: "pending",
+            kitchenStatus: "pending",
+            tabletId: generateTabletId()
+        };
+        
+        let isOnline = false;
+        let syncInterval;
+        
+        // Generate a unique ID for this tablet
+        function generateTabletId() {
+            return 'TAB-' + Math.random().toString(36).substr(2, 9).toUpperCase();
+        }
+        
+        // Initialize tablet functionality
+        function initTablet() {
+            // Display tablet ID
+            document.getElementById('tablet-id-display').textContent = 'Tablet ID: ' + tabletOrder.tabletId;
+            
+            // Load menu items for tablet
+            updateTabletCategories();
+            updateTabletMenuItems();
+            updateTabletTableDropdown();
+            updateTabletOrderItems();
+            
+            // Check network status
+            checkNetworkStatus();
+            
+            // Set up periodic sync
+            if (syncInterval) clearInterval(syncInterval);
+            syncInterval = setInterval(() => {
+                if (isOnline) {
+                    syncTabletOrders();
+                }
+            }, 5000); // Sync every 5 seconds when online
+        }
+        
+        // Check if we're connected to the main POS
+        function checkNetworkStatus() {
+            // In a real implementation, this would check for the presence of the main POS system
+            // For this demo, we'll simulate it with a random online/offline status
+            const randomOnline = Math.random() > 0.3; // 70% chance of being online
+            
+            if (randomOnline) {
+                isOnline = true;
+                document.getElementById('network-status').className = 'network-status network-online';
+                document.getElementById('network-status').innerHTML = '<i class="fas fa-wifi"></i> Online';
+                document.getElementById('tablet-connection-status').className = 'badge bg-success';
+                document.getElementById('tablet-connection-status').textContent = 'Connected';
+            } else {
+                isOnline = false;
+                document.getElementById('network-status').className = 'network-status network-offline';
+                document.getElementById('network-status').innerHTML = '<i class="fas fa-wifi-slash"></i> Offline';
+                document.getElementById('tablet-connection-status').className = 'badge bg-warning';
+                document.getElementById('tablet-connection-status').textContent = 'Disconnected';
+            }
+        }
+        
+        // Sync tablet orders with main POS
+        function syncTabletOrders() {
+            if (!isOnline) return;
+            
+            // Get pending orders from localStorage
+            const pendingOrders = JSON.parse(localStorage.getItem('tabletPendingOrders') || '[]');
+            
+            if (pendingOrders.length > 0) {
+                // In a real implementation, this would send orders to the main POS via HTTP requests
+                // For this demo, we'll simulate it by adding directly to restaurantData.orders
+                
+                pendingOrders.forEach(order => {
+                    // Generate a proper order ID
+                    order.id = 'ORD-' + Date.now().toString().slice(-6) + Math.random().toString(36).substr(2, 3).toUpperCase();
+                    
+                    // Add to main orders
+                    restaurantData.orders.push(order);
+                    
+                    // Update table status if dine-in
+                    if (order.orderType === 'dine-in' && order.tableNumber) {
+                        updateTableStatus(order.tableNumber, 'occupied', order.id);
+                    }
+                });
+                
+                // Clear pending orders
+                localStorage.setItem('tabletPendingOrders', '[]');
+                
+                // Update last sync time
+                const now = new Date();
+                document.getElementById('tablet-last-sync').textContent = now.toLocaleTimeString();
+                
+                // Save data and update UI
+                saveData();
+                updateDashboard();
+                
+                showNotification(`${pendingOrders.length} orders synced successfully`, 'success');
+            }
+        }
+        
+        // Update tablet categories
+        function updateTabletCategories() {
+            const categoriesContainer = document.getElementById('tablet-categories');
+            categoriesContainer.innerHTML = '';
+            
+            restaurantData.categories.forEach(category => {
+                const button = document.createElement('button');
+                button.className = 'btn btn-outline-primary tablet-category-btn';
+                button.textContent = category;
+                button.dataset.category = category;
+                button.addEventListener('click', () => filterTabletMenuItems(category));
+                categoriesContainer.appendChild(button);
+            });
+            
+            // Add "All" button
+            const allButton = document.createElement('button');
+            allButton.className = 'btn btn-primary tablet-category-btn';
+            allButton.textContent = 'All';
+            allButton.addEventListener('click', () => filterTabletMenuItems('all'));
+            categoriesContainer.prepend(allButton);
+        }
+        
+        // Update tablet menu items
+        function updateTabletMenuItems(category = 'all') {
+            const menuItemsContainer = document.getElementById('tablet-menu-items');
+            menuItemsContainer.innerHTML = '';
+            
+            let itemsToShow = [...restaurantData.menuItems];
+            
+            if (category !== 'all') {
+                itemsToShow = itemsToShow.filter(item => item.category === category);
+            }
+            
+            if (itemsToShow.length === 0) {
+                menuItemsContainer.innerHTML = `
+                    <div class="col-12 text-center text-muted py-4">
+                        <i class="fas fa-utensils fa-3x mb-3"></i>
+                        <p>No items found</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            itemsToShow.forEach(item => {
+                const col = document.createElement('div');
+                col.className = 'col-md-6 col-lg-4 mb-3';
+                
+                const card = document.createElement('div');
+                card.className = 'card tablet-menu-item';
+                card.innerHTML = `
+                    <img src="${item.image}" class="card-img-top menu-item-img" alt="${item.name}">
+                    <div class="card-body p-2">
+                        <h6 class="card-title mb-1">${item.name}</h6>
+                        <p class="card-text mb-1">${restaurantData.settings.currencySymbol}${item.price.toFixed(2)}</p>
+                        <button class="btn btn-sm btn-primary w-100 add-to-tablet-order" data-id="${item.id}">Add to Order</button>
+                    </div>
+                `;
+                
+                col.appendChild(card);
+                menuItemsContainer.appendChild(col);
+            });
+            
+            // Add event listeners to add-to-order buttons
+            document.querySelectorAll('.add-to-tablet-order').forEach(button => {
+                button.addEventListener('click', (e) => {
+                    const itemId = e.target.dataset.id;
+                    addItemToTabletOrder(itemId);
+                });
+            });
+        }
+        
+        // Filter tablet menu items by category
+        function filterTabletMenuItems(category) {
+            // Update active category button
+            document.querySelectorAll('.tablet-category-btn').forEach(btn => {
+                btn.classList.remove('btn-primary');
+                btn.classList.add('btn-outline-primary');
+            });
+            
+            const activeButton = document.querySelector(`.tablet-category-btn[data-category="${category}"]`) || 
+                                document.querySelector('.tablet-category-btn:first-child');
+            if (activeButton) {
+                activeButton.classList.remove('btn-outline-primary');
+                activeButton.classList.add('btn-primary');
+            }
+            
+            updateTabletMenuItems(category);
+        }
+        
+        // Update tablet table dropdown
+        function updateTabletTableDropdown() {
+            const tableSelect = document.getElementById('tablet-table-number');
+            tableSelect.innerHTML = '';
+            
+            // Add default option
+            const defaultOption = document.createElement('option');
+            defaultOption.value = '';
+            defaultOption.textContent = 'Select Table';
+            tableSelect.appendChild(defaultOption);
+            
+            restaurantData.tables.forEach(table => {
+                if (table.status === 'available') {
+                    const option = document.createElement('option');
+                    option.value = table.number;
+                    option.textContent = `Table ${table.number} (${table.capacity} seats)`;
+                    tableSelect.appendChild(option);
+                }
+            });
+            
+            // Set current table in dropdown
+            if (tabletOrder.tableNumber) {
+                tableSelect.value = tabletOrder.tableNumber;
+            }
+        }
+        
+        // Show/hide table selection based on order type
+        function toggleTabletTableSelection() {
+            const orderType = document.getElementById('tablet-order-type').value;
+            const tableSection = document.getElementById('tablet-table-section');
+            
+            if (orderType === 'dine-in') {
+                tableSection.style.display = 'block';
+                updateTabletTableDropdown();
+            } else {
+                tableSection.style.display = 'none';
+                tabletOrder.tableNumber = null;
+            }
+        }
+        
+        // Add item to tablet order
+        function addItemToTabletOrder(itemId) {
+            const item = restaurantData.menuItems.find(i => i.id === itemId);
+            if (!item) return;
+            
+            // Check if item already exists in order
+            const existingItem = tabletOrder.items.find(i => i.id === itemId);
+            if (existingItem) {
+                existingItem.quantity += 1;
+            } else {
+                tabletOrder.items.push({
+                    id: item.id,
+                    name: item.name,
+                    price: item.price,
+                    quantity: 1
+                });
+            }
+            
+            updateTabletOrderItems();
+            showNotification(`${item.name} added to order`, 'success');
+        }
+        
+        // Update tablet order items display
+        function updateTabletOrderItems() {
+            const orderItemsContainer = document.getElementById('tablet-order-items');
+            
+            if (tabletOrder.items.length === 0) {
+                orderItemsContainer.innerHTML = '<p class="text-muted text-center">No items added yet</p>';
+                updateTabletOrderTotals();
+                return;
+            }
+            
+            orderItemsContainer.innerHTML = '';
+            
+            tabletOrder.items.forEach((item, index) => {
+                const itemDiv = document.createElement('div');
+                itemDiv.className = 'order-item d-flex justify-content-between align-items-center';
+                itemDiv.innerHTML = `
+                    <div>
+                        <h6 class="mb-0">${item.name}</h6>
+                        <small class="text-muted">${restaurantData.settings.currencySymbol}${item.price.toFixed(2)} × ${item.quantity}</small>
+                    </div>
+                    <div class="d-flex align-items-center">
+                        <div class="btn-group btn-group-sm me-2">
+                            <button class="btn btn-outline-secondary decrease-tablet-item" data-index="${index}">
+                                <i class="fas fa-minus"></i>
+                            </button>
+                            <button class="btn btn-outline-secondary increase-tablet-item" data-index="${index}">
+                                <i class="fas fa-plus"></i>
+                            </button>
+                        </div>
+                        <span class="me-3">${restaurantData.settings.currencySymbol}${(item.price * item.quantity).toFixed(2)}</span>
+                        <button class="btn btn-sm btn-outline-danger remove-tablet-item" data-index="${index}">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                `;
+                orderItemsContainer.appendChild(itemDiv);
+            });
+            
+            // Add event listeners to remove buttons
+            document.querySelectorAll('.remove-tablet-item').forEach(button => {
+                button.addEventListener('click', (e) => {
+                    const index = parseInt(e.target.closest('button').dataset.index);
+                    removeItemFromTabletOrder(index);
+                });
+            });
+            
+            // Add event listeners to increase buttons
+            document.querySelectorAll('.increase-tablet-item').forEach(button => {
+                button.addEventListener('click', (e) => {
+                    const index = parseInt(e.target.closest('button').dataset.index);
+                    increaseTabletItemQuantity(index);
+                });
+            });
+            
+            // Add event listeners to decrease buttons
+            document.querySelectorAll('.decrease-tablet-item').forEach(button => {
+                button.addEventListener('click', (e) => {
+                    const index = parseInt(e.target.closest('button').dataset.index);
+                    decreaseTabletItemQuantity(index);
+                });
+            });
+            
+            // Update totals
+            updateTabletOrderTotals();
+        }
+        
+        // Remove item from tablet order
+        function removeItemFromTabletOrder(index) {
+            const removedItem = tabletOrder.items[index];
+            tabletOrder.items.splice(index, 1);
+            updateTabletOrderItems();
+            showNotification(`${removedItem.name} removed from order`, 'info');
+        }
+        
+        // Increase item quantity in tablet order
+        function increaseTabletItemQuantity(index) {
+            tabletOrder.items[index].quantity += 1;
+            updateTabletOrderItems();
+        }
+        
+        // Decrease item quantity in tablet order
+        function decreaseTabletItemQuantity(index) {
+            if (tabletOrder.items[index].quantity > 1) {
+                tabletOrder.items[index].quantity -= 1;
+                updateTabletOrderItems();
+            } else {
+                removeItemFromTabletOrder(index);
+            }
+        }
+        
+        // Update tablet order totals
+        function updateTabletOrderTotals() {
+            const subtotal = tabletOrder.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+            const tax = subtotal * (restaurantData.settings.taxRate / 100);
+            const total = subtotal + tax;
+            
+            document.getElementById('tablet-order-subtotal').textContent = `${restaurantData.settings.currencySymbol}${subtotal.toFixed(2)}`;
+            document.getElementById('tablet-order-tax').textContent = `${restaurantData.settings.currencySymbol}${tax.toFixed(2)}`;
+            document.getElementById('tablet-order-total').textContent = `${restaurantData.settings.currencySymbol}${total.toFixed(2)}`;
+            
+            // Update tax rate display
+            document.getElementById('tablet-tax-rate').textContent = restaurantData.settings.taxRate;
+        }
+        
+        // Confirm tablet order
+        function confirmTabletOrder() {
+            if (tabletOrder.items.length === 0) {
+                showNotification('Please add items to the order before confirming', 'warning');
+                return;
+            }
+            
+            // Get values from form
+            tabletOrder.customerName = document.getElementById('tablet-customer-name').value || 'Walk-in Customer';
+            tabletOrder.customerPhone = document.getElementById('tablet-customer-phone').value || '';
+            tabletOrder.orderType = document.getElementById('tablet-order-type').value;
+            
+            if (tabletOrder.orderType === 'dine-in') {
+                tabletOrder.tableNumber = parseInt(document.getElementById('tablet-table-number').value) || null;
+                
+                if (!tabletOrder.tableNumber) {
+                    showNotification('Please select a table for dine-in orders', 'warning');
+                    return;
+                }
+            } else {
+                tabletOrder.tableNumber = null;
+            }
+            
+            // Set date
+            tabletOrder.date = new Date().toISOString();
+            
+            // Get pending orders from localStorage
+            const pendingOrders = JSON.parse(localStorage.getItem('tabletPendingOrders') || '[]');
+            
+            // Add current order to pending orders
+            pendingOrders.push({...tabletOrder});
+            
+            // Save to localStorage
+            localStorage.setItem('tabletPendingOrders', JSON.stringify(pendingOrders));
+            
+            // Try to sync immediately if online
+            if (isOnline) {
+                syncTabletOrders();
+            }
+            
+            // Reset tablet order
+            resetTabletOrder();
+            
+            showNotification('Order confirmed and queued for synchronization', 'success');
+        }
+        
+        // Reset tablet order
+        function resetTabletOrder() {
+            tabletOrder.items = [];
+            tabletOrder.customerName = "";
+            tabletOrder.customerPhone = "";
+            document.getElementById('tablet-customer-name').value = "";
+            document.getElementById('tablet-customer-phone').value = "";
+            document.getElementById('tablet-order-type').value = "dine-in";
+            document.getElementById('tablet-table-number').value = "";
+            
+            updateTabletOrderItems();
+        }
+
+        // Initialize the page
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize the dashboard as the default view
+            document.getElementById('dashboard').classList.add('active');
+            updateDashboard();
+            
+            // Event listeners for table management
+            document.getElementById('add-table-form').addEventListener('submit', function(e) {
+                e.preventDefault();
+                const tableNumber = parseInt(document.getElementById('table-number').value);
+                const capacity = parseInt(document.getElementById('table-capacity').value);
+                
+                // Check if table already exists
+                if (restaurantData.tables.some(t => t.number === tableNumber)) {
+                    showNotification(`Table ${tableNumber} already exists`, 'warning');
+                    return;
+                }
+                
+                // Add new table
+                restaurantData.tables.push({
+                    number: tableNumber,
+                    capacity: capacity,
+                    status: 'available'
+                });
+                
+                saveData();
+                updateTablesView();
+                this.reset();
+                
+                showNotification(`Table ${tableNumber} added successfully`, 'success');
+            });
+            
+            // Event listeners for new order section
+            document.getElementById('order-type').addEventListener('change', toggleTableSelection);
+            document.getElementById('order-table-number').addEventListener('change', (e) => {
+                currentOrder.tableNumber = parseInt(e.target.value) || null;
+            });
+            
+            document.getElementById('order-customer-name').addEventListener('input', (e) => {
+                currentOrder.customerName = e.target.value;
+            });
+            
+            document.getElementById('order-customer-phone').addEventListener('input', (e) => {
+                currentOrder.customerPhone = e.target.value;
+            });
+            
+            document.getElementById('menu-category-filter').addEventListener('change', (e) => {
+                updateMenuItems(e.target.value);
+            });
+            
+            document.getElementById('confirm-order').addEventListener('click', confirmCurrentOrder);
+            document.getElementById('clear-order').addEventListener('click', () => {
+                if (confirm('Are you sure you want to clear the current order?')) {
+                    resetCurrentOrder();
+                    showNotification('Order cleared', 'info');
+                }
+            });
+            
+            // Event listeners for kitchen view
+            document.getElementById('refresh-kitchen').addEventListener('click', () => {
+                updateKitchenOrders();
+                showNotification('Kitchen view refreshed', 'info');
+            });
+            
+            // Event listeners for menu management
+            document.getElementById('add-menu-item-form').addEventListener('submit', function(e) {
+                e.preventDefault();
+                const name = document.getElementById('item-name').value;
+                const price = parseFloat(document.getElementById('item-price').value);
+                const category = document.getElementById('item-category').value;
+                const image = document.getElementById('item-image').value || `https://via.placeholder.com/300x200/000000/FFFFFF?text=${encodeURIComponent(name)}`;
+                
+                // Add new menu item
+                restaurantData.menuItems.push({
+                    id: 'item' + Date.now(),
+                    name: name,
+                    price: price,
+                    category: category,
+                    image: image
+                });
+                
+                saveData();
+                updateMenuItemsTable();
+                updateCategoriesDropdown();
+                this.reset();
+                
+                showNotification(`${name} added to menu`, 'success');
+            });
+            
+            document.getElementById('add-category-form').addEventListener('submit', function(e) {
+                e.preventDefault();
+                const name = document.getElementById('category-name').value;
+                
+                // Check if category already exists
+                if (restaurantData.categories.includes(name)) {
+                    showNotification(`Category "${name}" already exists`, 'warning');
+                    return;
+                }
+                
+                // Add new category
+                restaurantData.categories.push(name);
+                
+                saveData();
+                updateCategoriesDropdown();
+                this.reset();
+                
+                showNotification(`Category "${name}" added`, 'success');
+            });
+            
+            // Event listeners for reports
+            document.getElementById('generate-report').addEventListener('click', generateReport);
+            
+            // Event listeners for settings
+            document.getElementById('restaurant-settings-form').addEventListener('submit', function(e) {
+                e.preventDefault();
+                const name = document.getElementById('restaurant-name').value;
+                const currencySymbol = document.getElementById('currency-symbol').value;
+                const taxRate = parseFloat(document.getElementById('tax-rate').value);
+                
+                // Update settings
+                restaurantData.name = name;
+                restaurantData.settings.currencySymbol = currencySymbol;
+                restaurantData.settings.taxRate = taxRate;
+                
+                saveData();
+                
+                showNotification('Settings saved successfully', 'success');
+            });
+            
+            document.getElementById('reset-data').addEventListener('click', () => {
+                if (confirm('Are you sure you want to reset all data? This cannot be undone.')) {
+                    localStorage.clear();
+                    location.reload();
+                }
+            });
+            
+            document.getElementById('export-data').addEventListener('click', () => {
+                const dataStr = JSON.stringify(restaurantData);
+                const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+                
+                const exportFileDefaultName = 'restaurant-data.json';
+                
+                const linkElement = document.createElement('a');
+                linkElement.setAttribute('href', dataUri);
+                linkElement.setAttribute('download', exportFileDefaultName);
+                linkElement.click();
+                
+                showNotification('Data exported successfully', 'success');
+            });
+            
+            document.getElementById('import-data').addEventListener('click', () => {
+                document.getElementById('import-file').click();
+            });
+            
+            document.getElementById('import-file').addEventListener('change', function(e) {
+                const file = e.target.files[0];
+                if (!file) return;
+                
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    try {
+                        const data = JSON.parse(e.target.result);
+                        restaurantData = data;
+                        saveData();
+                        location.reload();
+                        showNotification('Data imported successfully', 'success');
+                    } catch (error) {
+                        showNotification('Error importing data: Invalid file format', 'error');
+                    }
+                };
+                reader.readAsText(file);
+            });
+            
+            // Event listeners for tablet functionality
+            document.getElementById('tablet-order-type').addEventListener('change', toggleTabletTableSelection);
+            document.getElementById('tablet-table-number').addEventListener('change', (e) => {
+                tabletOrder.tableNumber = parseInt(e.target.value) || null;
+            });
+            
+            document.getElementById('tablet-customer-name').addEventListener('input', (e) => {
+                tabletOrder.customerName = e.target.value;
+            });
+            
+            document.getElementById('tablet-customer-phone').addEventListener('input', (e) => {
+                tabletOrder.customerPhone = e.target.value;
+            });
+            
+            document.getElementById('tablet-confirm-order').addEventListener('click', confirmTabletOrder);
+            document.getElementById('tablet-clear-order').addEventListener('click', () => {
+                if (confirm('Are you sure you want to clear the current order?')) {
+                    resetTabletOrder();
+                    showNotification('Order cleared', 'info');
+                }
+            });
+            
+            document.getElementById('refresh-tablet').addEventListener('click', () => {
+                updateTabletCategories();
+                updateTabletMenuItems();
+                updateTabletTableDropdown();
+                checkNetworkStatus();
+                showNotification('Tablet view refreshed', 'info');
+            });
+            
+            document.getElementById('tablet-manual-sync').addEventListener('click', () => {
+                checkNetworkStatus();
+                if (isOnline) {
+                    syncTabletOrders();
+                } else {
+                    showNotification('Not connected to main POS system', 'warning');
+                }
+            });
+            
+            // Show welcome message
+            showNotification('Restaurant POS system loaded successfully', 'success');
+        });
+    </script>
+</body>
+</html>
